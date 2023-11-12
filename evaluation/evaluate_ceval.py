@@ -56,8 +56,7 @@ def parse_args():
                         default=0,
                         help='shot num')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 class EvalDataset_(Dataset):
     def __init__(self, tokenizer,
@@ -173,29 +172,25 @@ class EvalDataset_(Dataset):
                 c = test['C'].strip()
                 d = test['D'].strip()
                 question = test['question'].strip()
+                choices = ["A", "B", "C", "D"]
                 if self.shot_num != 0:
                     context = question + '\n' + 'A. ' + a + '\nB. ' + b + '\nC. ' + c + '\nD. ' + d
-                    context_list = []
-                    for idd in range(self.shot_num):
-                        c_context_concat = dev_context[idd] + '\n选项ABCD中正确的答案：' + dev_answer[idd]
-                        context_list.append(c_context_concat)
+                    context_list = [
+                        dev_context[idd] + '\n选项ABCD中正确的答案：' + dev_answer[idd]
+                        for idd in range(self.shot_num)
+                    ]
                     context = subject_topic + '\n\n'.join(context_list) + '\n\n' + context + '\n选项ABCD中正确的答案：'
-                    choices = ["A", "B", "C", "D"]
-                    text_sample = (context, choices, choice_label, s, idx)
-                    processed_dataset.append(text_sample)
                 else:
                     context = subject_topic + question + '\n' + 'A. ' + a + '\nB. ' + b + '\nC. ' + c + '\nD. ' + d + '\n选项ABCD中正确的答案：'
-                    choices = ["A", "B", "C", "D"]
-                    text_sample = (context, choices, choice_label, s, idx)
-                    processed_dataset.append(text_sample)
-
+                text_sample = (context, choices, choice_label, s, idx)
+                processed_dataset.append(text_sample)
         return processed_dataset
 
     def __getitem__(self, idx):
         select_idx = idx
         text_sample = self.dataset[select_idx]
         context, choices, right_index, subject, idd = text_sample
-        if idx % 1000 == 0: print(context)
+        if select_idx % 1000 == 0: print(context)
         context_length = self.tokenizer(context, return_tensors="pt")["input_ids"].squeeze(0).size()[-1]
         inputs = []
         labels = []
@@ -228,16 +223,16 @@ class EvalDataset_(Dataset):
 
 def make_dataloader(dataset, batch_size):
     eval_sampler = SequentialSampler(dataset)
-    dataloader = DataLoader(dataset,
-                            collate_fn=choice_collator_fn,
-                            sampler=eval_sampler,
-                            batch_size=batch_size,
-                            num_workers=5,
-                            pin_memory=True,
-                            persistent_workers=True,
-                            drop_last=False
-                            )
-    return dataloader
+    return DataLoader(
+        dataset,
+        collate_fn=choice_collator_fn,
+        sampler=eval_sampler,
+        batch_size=batch_size,
+        num_workers=5,
+        pin_memory=True,
+        persistent_workers=True,
+        drop_last=False,
+    )
 
 
 def choice_collator_fn(data):
@@ -318,10 +313,8 @@ def main():
         for idx, choice in enumerate(c[0]):
             if c[1][idx] not in res.keys():
                 res[c[1][idx]] = {}
-                res[c[1][idx]][c[2][idx]] = chr(int(c[0][idx]) + 65)
-            else:
-                res[c[1][idx]][c[2][idx]] = chr(int(c[0][idx]) + 65)
-    with open(os.path.join(args.result_path, f"result.json"), mode='w', encoding="utf-8") as f:
+            res[c[1][idx]][c[2][idx]] = chr(int(c[0][idx]) + 65)
+    with open(os.path.join(args.result_path, "result.json"), mode='w', encoding="utf-8") as f:
         json.dump(res, f)
 
 

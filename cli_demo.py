@@ -38,11 +38,7 @@ def _load_model_tokenizer(args):
         args.model_path, trust_remote_code=True, resume_download=True,
     )
 
-    if args.cpu:
-        device_map = "cpu"
-    else:
-        device_map = "auto"
-
+    device_map = "cpu" if args.cpu else "auto"
     if not args.cpu and args.fp16:
         model = AutoModelForCausalLM.from_pretrained(
             args.model_path,
@@ -118,11 +114,7 @@ def main():
         # Process commands.
         if query.startswith(':'):
             command_words = query[1:].strip().split()
-            if not command_words:
-                command = ''
-            else:
-                command = command_words[0]
-
+            command = '' if not command_words else command_words[0]
             if command in ['exit', 'quit', 'q']:
                 break
             elif command == 'clear':

@@ -60,18 +60,17 @@ def parse_args():
                         help='batchsize')
 
     parser = deepspeed.add_config_arguments(parser)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def make_mmlu_dataset(tokenizer, shot_num, dev_path, test_path):
     
     file_names = [f for f in os.listdir(test_path) if "csv" in f]
     text_samples = []
+    name_subfix = "_dev.csv"
     for file_name in file_names:
         name_split = file_name.split('_')
         name_prefix = '_'.join(name_split[:-1])
-        name_subfix = "_dev.csv"
         dev_file_name = name_prefix + name_subfix
         df = pd.DataFrame(pd.read_csv(test_path + file_name, header=None))
         dev_df = pd.DataFrame(pd.read_csv(dev_path + dev_file_name, header=None))
@@ -104,9 +103,8 @@ def make_mmlu_dataset(tokenizer, shot_num, dev_path, test_path):
 
     dataset = text_samples
     dataset_processed = []
-    for idx in range(len(dataset)):
-        select_idx = idx
-        text_sample = dataset[select_idx]
+    for item in dataset:
+        text_sample = item
         context, right_letter = text_sample
         right_index = LABEL2IDX[right_letter]
         context_length = tokenizer(context, return_tensors="pt")["input_ids"].squeeze(0).size()[-1] - 1
@@ -132,7 +130,7 @@ def make_mmlu_dataset(tokenizer, shot_num, dev_path, test_path):
             attention_masks.append(attention_mask[:-1])
         sample = (torch.stack(inputs), torch.stack(attention_masks), torch.stack(labels), right_index)
         dataset_processed.append(sample)
-    
+
     return dataset_processed
 
 
@@ -172,7 +170,7 @@ def evaluation(model, eval_dataset, device):
 
 def main():
     args = parse_args()
-    assert (not args.local_rank == -1)
+    assert args.local_rank != -1
     torch.cuda.set_device(args.local_rank)
     device = torch.device("cuda", args.local_rank)
     deepspeed.init_distributed(dist_backend=args.backend)
