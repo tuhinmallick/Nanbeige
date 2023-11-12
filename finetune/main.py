@@ -57,7 +57,7 @@ def main():
 
     # check file existence
     if sft_config.dataset_name is None and sft_config.train_file_path is None:
-        raise ValueError(f"One of --dataset_name or --train_file_path must be set")
+        raise ValueError("One of --dataset_name or --train_file_path must be set")
     if sft_config.train_file_path:
         check_file_exist(sft_config.train_file_path)
     if sft_config.validate_file_path:

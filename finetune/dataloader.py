@@ -9,12 +9,12 @@ def create_dataset(training_args, sft_config, tokenizer):
     if sft_config.train_file_path:
         train_file_path = sft_config.train_file_path
     elif sft_config.dataset_name:
-        train_file_path = sft_config.dataset_name + "/train.jsonl"
+        train_file_path = f"{sft_config.dataset_name}/train.jsonl"
 
     if sft_config.validate_file_path:
         validate_file_path = sft_config.validate_file_path
     elif sft_config.dataset_name:
-        validate_file_path = sft_config.dataset_name + "/eval.jsonl"
+        validate_file_path = f"{sft_config.dataset_name}/eval.jsonl"
 
     raw_datasets = datasets.load_dataset("json", data_files={'train': train_file_path,
                                                              'validation': validate_file_path})
@@ -38,7 +38,7 @@ def create_dataset(training_args, sft_config, tokenizer):
             for tok_id, mask in zip(tok_ids, masks):
                 token_ids.append(tok_id)
                 attention_mask.append(mask)
-            
+
             if token_ids[-1] != tokenizer.eos_token_id and role == 'assistant':
                 # append eos if assistant 
                 token_ids.append(tokenizer.eos_token_id)
@@ -47,7 +47,7 @@ def create_dataset(training_args, sft_config, tokenizer):
                 # remove eos if not assistant 
                 token_ids.pop()
                 attention_mask.pop()
-            
+
             if is_first:
                 is_first = False
 

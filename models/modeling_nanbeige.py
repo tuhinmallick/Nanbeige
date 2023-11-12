@@ -25,10 +25,10 @@ try:
     import flash_attn
     from flash_attn import flash_attn_func
 
-    if int(flash_attn.__version__.split(".")[0]) >= 2 and int(flash_attn.__version__.split(".")[1]) >= 1:
-        Version_ = True
-    else:
-        Version_ = False
+    Version_ = (
+        int(flash_attn.__version__.split(".")[0]) >= 2
+        and int(flash_attn.__version__.split(".")[1]) >= 1
+    )
 except:
     logger.warn(
         "Warning: import flash_attn fail, please install FlashAttention to get higher efficiency "
@@ -86,14 +86,11 @@ def linear_ramp_mask(min, max, dim):
         max += 0.001  # Prevent singularity
 
     linear_func = (torch.arange(dim, dtype=torch.float32) - min) / (max - min)
-    ramp_func = torch.clamp(linear_func, 0, 1)
-    return ramp_func
+    return torch.clamp(linear_func, 0, 1)
 
 
 def get_mscale(scale=1):
-    if scale <= 1:
-        return 1.0
-    return 0.1 * math.log(scale) + 1.0
+    return 1.0 if scale <= 1 else 0.1 * math.log(scale) + 1.0
 
 
 class YaRNScaledRotaryEmbedding(torch.nn.Module):
@@ -902,13 +899,10 @@ class NanbeigeForSequenceClassification(NanbeigePreTrainedModel):
 
         if self.config.pad_token_id is None and batch_size != 1:
             raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
-        if self.config.pad_token_id is None:
-            sequence_lengths = -1
+        if self.config.pad_token_id is not None and input_ids is not None:
+            sequence_lengths = (torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1).to(logits.device)
         else:
-            if input_ids is not None:
-                sequence_lengths = (torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1).to(logits.device)
-            else:
-                sequence_lengths = -1
+            sequence_lengths = -1
 
         pooled_logits = logits[torch.arange(batch_size, device=logits.device), sequence_lengths]
 
@@ -918,7 +912,7 @@ class NanbeigeForSequenceClassification(NanbeigePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and labels.dtype in [torch.long, torch.int]:
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
